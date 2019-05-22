@@ -28,3 +28,25 @@ firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i ens33 -o ens37 -m stat
 
 firewall-cmd --list-all --zone=external
 iptables -L
+
+yum -y install docker git
+systemctl enable docker
+systemctl start docker
+echo >'
+#dnsmasq config, for a complete example, see:
+#  http://oss.segetech.com/intra/srv/dnsmasq.conf
+#log all dns queries
+log-queries
+#dont use hosts nameservers
+no-resolv
+#use cloudflare as default nameservers, prefer 1^4
+server=8.8.8.8
+server=1.1.1.1
+strict-order
+#serve all .company queries using a specific nameserver
+server=/baidu.com/1.1.1.1
+#explicitly define host-ip mappings
+address=/echo.com/10.0.0.2
+'> /opt/dnsmasq.conf 
+
+docker run --name dnsmasq -d -p 53:53/udp -p  80:8080 -v /opt/dnsmasq.conf:/etc/dnsmasq.conf --log-driver json-file  --log-opt "max-size=100m" -e "HTTP_USER=dnsmasq" -e "HTTP_PASS=redhat" --restart always  jpillora/dnsmasq
